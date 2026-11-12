@@ -247,3 +247,37 @@ Ruff format checked 29 files, Ruff lint passed, and Mypy passed its ten scoped m
 ### Review findings and next milestone
 
 Backend booking uniqueness and conflict checks are inside SQLite `BEGIN IMMEDIATE` transactions. Service operation keys and readback guard writes; a post-commit timeout fixture is reconciled by lookup without a second mutation. API inspection is loopback-only and masks contact; fault controls come only from package-owned scenarios. Events omit raw contact and reasoning. Local DB transcripts and raw evaluation artifacts have no automatic expiry, so demo operators must use synthetic data and remove files after use; public deployment needs authentication and retention rules. A process crash can leave a turn marked `processing`; retries then fail safely without a second write, but manual recovery is required. Full-package Mypy remains open because the dynamic service/policy modules still report typing errors; CI checks ten modules. The workflow has not yet been observed on GitHub Actions; its local commands passed. Live model compatibility, critical-failure count, token usage, cost, and latency remain unverified until the key is supplied. Next: [`M8_submission_demo.md`](../tasks/M8_submission_demo.md), after completing the deferred live M6/M7 gates.
+
+## M8 — submission package and live-evidence boundary
+
+Status: **M8 offline package prepared and tested on 2026-11-12; submission acceptance remains partial**. The actual Loom recording and live baseline/final results do not exist. The owner will provide the model key later. No M9 task file exists in this repository, so its scope is awaiting the owner's answer.
+
+### Added or changed
+
+- `README.md` and `README_START_HERE.md`: quick start, architecture, assumptions, CLI/API/UI, offline Promptfoo, model setting, and limitations.
+- `docs/M8_DEMO_AND_SUBMISSION.md` and three `docs/assets/m8-*.png` screenshots: observed S01/S03/S02 scenes and a 10-minute Loom storyboard, labeled offline.
+- `scripts/demo_scenes.py`: real shared-runtime replay with explicit SQLite state/event agreement; `scripts/capture_browser_scenes.mjs`: browser driver for actual screenshots.
+- `backend/sophie/llm.py`, both evaluation providers, `.env.example`, and evaluation docs: quality-oriented `gpt-6.1-sol` default with same-model baseline/final commands. The model remains environment-overridable; access and quality are unverified without a key.
+- Local commit `d63558e`: staged 105 source, docs, tests, fixture, and screenshot files after secret/ignored-state audit. No remote push was made.
+
+### Executed checks and evidence
+
+```sh
+PYTHONPATH=backend:. .venv/bin/python scripts/demo_scenes.py
+node scripts/capture_browser_scenes.mjs
+.venv/bin/ruff format backend evals tests scripts provider.py
+.venv/bin/ruff check backend evals tests scripts provider.py
+.venv/bin/mypy --follow-imports=skip --ignore-missing-imports backend/sophie/{contracts,state,llm,time_utils,runtime,facts,grounding,cli,scenarios,api}.py
+env -u OPENAI_API_KEY TMPDIR="$PWD/.test-tmp" .venv/bin/python -m pytest -q --basetemp=.test-tmp/m8-full
+(cd frontend && npm run typecheck && npm test && npm run build)
+env -u OPENAI_API_KEY PYTHONPATH=backend:. SOPHIE_EVAL_MODE=offline PROMPTFOO_PYTHON=.venv/bin/python PROMPTFOO_DISABLE_TELEMETRY=1 npx promptfoo eval --no-cache --no-write --no-table --no-progress-bar -o evals/artifacts/final-offline.json
+git diff --cached --check
+```
+
+The demo replay passed all three scenes: S01 booked one November 17, 2026 at 15:00 New York time; S03 returned `slot_taken` and persisted no tour; S02 rescheduled and canceled the same seeded tour ID. The browser driver showed those outcomes through the real API/UI and saved three screenshots. Ruff lint and scoped Mypy passed. Pytest passed **117 tests** with one upstream Starlette warning. Frontend typecheck, two Vitest tests, and build passed. Promptfoo passed **42/42** offline cases; saved latency p50 38 ms, p95 72 ms, max 124 ms, with no live model tokens. `git diff --cached --check` passed after preserving intentional Markdown hard breaks in reference docs through `.gitattributes`. Inherited hashes still match their manifest.
+
+A fresh local clone of `d63558e` installed Python and frontend dependencies and passed 117 pytest tests, frontend checks, CLI fee response, and the three demo replays. Full root `npm ci` twice failed with this Mac's `ENOSPC` while unpacking optional packages; the fresh clone's Promptfoo run passed 42/42 after a low-space install plus the lockfile-verified Darwin `libsql` binding. The exact full root `npm ci` remains unverified on this constrained volume. The working directory's generated Python and frontend dependencies were restored afterward; root Promptfoo 0.125.1 is available.
+
+### Open for final submission
+
+Record and review a real 5–15 minute Loom, add its link, supply the API key for one live smoke plus reconstructed baseline/final suites on the same model, inspect critical failures and actual cost/latency, then publish the reviewed repository. No GitHub Actions remote run or push has occurred. M9 has no repository definition; an owner scope decision is required before that milestone can be implemented.

@@ -164,4 +164,4 @@ The local API is loopback-only and unauthenticated. It stores caller transcript/
 
 For future API access, copy [`.env.example`](.env.example) to `.env` and fill placeholders only when a milestone needs them. Never commit `.env`, local databases, or caller data.
 
-**Submission status:** M8 documentation and offline demo evidence are in progress. A Loom recording and live M6/M7 results still require the owner's key and recording step. The repository has no defined M9 task.
+**Submission status:** M8's offline package, three browser scenes, and local source commit are ready. A Loom recording and live M6/M7 results still require the owner's recording and API key. The repository has no defined M9 task. On this Mac, full root `npm ci` failed from low disk space; the fresh-clone offline evaluation passed with the lockfile-verified native binding workaround recorded in the [M8 guide](docs/M8_DEMO_AND_SUBMISSION.md#fresh-clone-installation-check).

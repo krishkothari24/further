@@ -29,7 +29,7 @@ Start `.venv/bin/python -m sophie.api --db .local-sophie.db --offline` and, in a
 3. **S02:** Use the seeded booking, ask to move it to Thursday at 11 a.m., confirm, then cancel it. Show the same ID in the move/cancel trace and the final `canceled` row.
 4. Open **Facts** for the $3,500 fee and its `mock-original` provenance. Open **Evaluations** after running Promptfoo; it displays a summary of the actual saved artifact, or an honest empty state.
 
-The real browser was driven through the local Vite/API stack with `node scripts/capture_browser_scenes.mjs`. It captured [S01 booked](assets/m8-s01-booked.png), [S03 lost slot](assets/m8-s03-lost-slot.png), and [S02 canceled](assets/m8-s02-canceled.png). The images show generated runtime text and persisted state, with synthetic masked contact. They are offline screenshots; they do not establish live model quality.
+The real browser was driven through the local Vite/API stack with `node scripts/capture_browser_scenes.mjs` while headless Chrome exposed DevTools on port 9222. It captured [S01 booked](assets/m8-s01-booked.png), [S03 lost slot](assets/m8-s03-lost-slot.png), and [S02 canceled](assets/m8-s02-canceled.png). The images show generated runtime text and persisted state, with synthetic masked contact. They are offline screenshots; they do not establish live model quality.
 
 ## 10-minute Loom storyboard
 
@@ -53,3 +53,9 @@ Before submission, record and link the Loom URL here. The user must review the r
 - Inherited originals: `inherited/` hashes match `inherited/SHA256.md`; never edit them to improve scores.
 - Credentials: `.env.example` contains placeholders; `.env`, local SQLite, raw evaluation artifacts, caches, and build output are ignored.
 - Open: live API smoke, reconstructed baseline and final live Promptfoo results on the same model, their actual token/cost/latency report, a real Loom recording, and publishing the reviewed repository. The default model is GPT-6.1 Sol, but an account key is needed to verify access and quality.
+
+## Fresh-clone installation check
+
+A local clone of commit `d63558e` was created under ignored `.test-tmp/m8-clean`. A fresh Python virtual environment installed `.[dev]`; 117 pytest tests and `pip check` passed. A fresh frontend `npm ci` installed 202 packages; typecheck, 2 tests, and build passed. The offline CLI returned the canonical $3,500 fee, and `scripts/demo_scenes.py` passed all three state/trace checks.
+
+The documented **full** root `npm ci` hit this Mac's `ENOSPC` limit twice during dependency unpacking. A low-space install with `npm ci --omit=optional` succeeded, but Promptfoo then lacked its optional Darwin `@libsql/darwin-arm64` binding. After installing that exact package from the lockfile tarball and verifying its SHA-512 integrity, the fresh clone's `npx promptfoo eval` passed **42/42** offline cases. This demonstrates the package and eval work from the committed source, while the exact full-install command remains unverified on this storage-constrained machine. GitHub Actions has not been run remotely.
