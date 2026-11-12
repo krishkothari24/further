@@ -1,0 +1,11 @@
+description: Sophie final state-aware evaluation (shared runtime)
+prompts:
+  - '{{user_input}}'
+providers:
+  - id: file://provider.py
+    label: SophieRuntime
+defaultTest:
+  assert:
+    - type: python
+      value: file://evals/assertions.py:grade
+tests: file://evals/cases.yaml

@@ -1,0 +1,52 @@
+{
+  "pricing": {
+    "independent_living_from": {"value": 2000, "unit": "USD/month", "source": "mock-original", "status": "known"},
+    "assisted_living_from": {"value": 3000, "unit": "USD/month", "source": "mock-original", "status": "known"},
+    "entrance_fee": {"value": 3500, "unit": "USD", "source": "mock-original", "status": "known"},
+    "two_bedroom_assisted_living": {"value": null, "unit": "USD/month", "source": "unknown", "status": "unknown"},
+    "monthly_inclusions": {"value": null, "unit": "services", "source": "unknown", "status": "needs_staff_confirmation"},
+    "entrance_fee_waiver": {"value": null, "unit": "policy", "source": "unknown", "status": "unknown"}
+  },
+  "care_types": {
+    "offered": {"value": ["Independent Living", "Assisted Living"], "unit": "care types", "source": "mock-original", "status": "known"},
+    "couples_policy": {"value": null, "unit": "placement policy", "source": "unknown", "status": "needs_staff_confirmation"}
+  },
+  "memory_care": {
+    "offered": {"value": false, "unit": "dedicated memory care", "source": "mock-original", "status": "known"},
+    "dementia_suitability": {"value": null, "unit": "clinical assessment", "source": "unknown", "status": "needs_staff_confirmation"}
+  },
+  "pets": {
+    "cats": {"value": true, "unit": "allowed", "source": "mock-original", "status": "known"},
+    "dogs": {"value": true, "unit": "allowed", "source": "mock-original", "status": "known"},
+    "dog_weight_limit_lbs": {"value": 30, "unit": "lb", "source": "mock-original", "status": "known"},
+    "service_animals": {"value": true, "unit": "allowed", "source": "mock-original", "status": "known"}
+  },
+  "room_types": {
+    "offered": {"value": ["Studio", "1 Bedroom / 1 Bath", "2 Bedroom / 1.5 Bath"], "unit": "room types", "source": "mock-original", "status": "known"},
+    "individual_thermostat": {"value": null, "unit": "room feature", "source": "unknown", "status": "unknown"},
+    "general_air_conditioning": {"value": null, "unit": "room feature", "source": "unknown", "status": "unknown"}
+  },
+  "parking": {
+    "resident_cars": {"value": null, "unit": "resident policy", "source": "unknown", "status": "needs_staff_confirmation"}
+  },
+  "phone": {
+    "main": {"value": "850-445-8362", "unit": "phone number", "source": "mock-original", "status": "known"}
+  },
+  "address": {
+    "community": {"value": "145 Fake Street, Charlotte, NC 28203", "unit": "postal address", "source": "mock-original", "status": "known"}
+  },
+  "amenities": {
+    "gym": {"value": true, "unit": "available", "source": "legacy-prompt", "status": "known"},
+    "elevators": {"value": true, "unit": "available", "source": "legacy-prompt", "status": "known"}
+  },
+  "dietary": {
+    "low_sodium": {"value": true, "unit": "meal option", "source": "legacy-prompt", "status": "known"},
+    "kosher": {"value": null, "unit": "meal option", "source": "unknown", "status": "unknown"}
+  },
+  "funding": {
+    "medicaid_eligibility": {"value": null, "unit": "funding", "source": "unknown", "status": "needs_staff_confirmation"}
+  },
+  "careers": {
+    "current_openings": {"value": null, "unit": "employment", "source": "unknown", "status": "needs_staff_confirmation"}
+  }
+}

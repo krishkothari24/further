@@ -1,0 +1,2 @@
+# Preserve intentional Markdown hard line breaks in imported reference documents.
+docs/reference/*.md whitespace=-blank-at-eol

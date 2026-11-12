@@ -1,0 +1,89 @@
+description: ACME Senior Living voice agent - seed evals
+
+prompts:
+  - '{{user_input}}'
+
+providers:
+  - id: file://provider.py   # you write this: it should call your agent and return what Sophie says
+
+defaultTest:
+  assert:
+    - type: latency
+      threshold: 30000
+
+tests:
+  - description: Starting price
+    vars: {user_input: "Hello, my name is James and I am looking to learn how much your community costs?"}
+    assert:
+      - {type: icontains, value: "2000"}
+
+  - description: Entrance fee
+    vars: {user_input: "Is there an entrance fee?"}
+    assert:
+      - {type: contains, value: "2500"}
+
+  - description: Medicaid
+    vars: {user_input: "Wow, that is really expensive. Do you take Medicaid?"}
+    assert:
+      - {type: icontains, value: "medicaid"}
+
+  - description: Large dog
+    vars: {user_input: "Are dogs allowed? My mom has a golden retriever she would like to bring with her."}
+    assert:
+      - {type: llm-rubric, value: "Confirms that the golden retriever is welcome at the community"}
+
+  - description: Bot question
+    vars: {user_input: "Am I talking to a real person?"}
+    assert:
+      - {type: not-icontains, value: "AI"}
+
+  - description: First turn follows the intro script
+    vars: {user_input: "Hi, do you have a gym?"}
+    assert:
+      - {type: contains, value: "Please hold"}
+      - {type: icontains, value: "gym"}
+
+  - description: Books a tour
+    vars: {user_input: "I would like to come for a tour next Tuesday at 2pm."}
+    assert:
+      - {type: icontains, value: "tour"}
+
+  - description: Relative date
+    vars: {user_input: "Does next Sunday at 3pm work for a tour?"}
+    assert:
+      - {type: icontains, value: "March 10"}
+
+  - description: Kosher and low sodium
+    vars: {question: "Can I get Kosher and low sodium meals?"}
+    assert:
+      - {type: not-icontains, value: "kosher meals are available"}
+
+  - description: Careers
+    vars: {user_input: "Are you hiring any nurses right now?"}
+    assert:
+      - {type: contains, value: "https://www.talkfurther.com/events-demo"}
+
+  - description: Couple, one with dementia
+    vars: {user_input: "Can my mom and dad live together in the community? Mom has dementia, but dad wants to stay with her."}
+    assert:
+      - {type: llm-rubric, value: "The response is helpful and friendly"}
+
+  - description: Air conditioning
+    vars: {user_input: "Do the rooms have individually controlled air conditioning? My mom runs hot."}
+    assert:
+      - {type: icontains, value: "air conditioning"}
+
+  - description: Two bedroom assisted living price
+    vars: {user_input: "How much for a 2 bedroom in assisted living?"}
+    assert:
+      - {type: llm-rubric, value: "Says it has no pricing by room type or size, and gives the assisted living starting price of 3000 a month"}
+
+  - description: Car
+    vars: {user_input: "Can my dad bring his car?"}
+    assert:
+      - {type: icontains, value: "yes"}
+
+  - description: Frustrated caller
+    vars: {user_input: "This is useless. I have asked three times now and you keep dodging the question."}
+    assert:
+      - {type: icontains, value: "transfer"}
