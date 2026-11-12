@@ -5,7 +5,7 @@
 ## Work
 
 - Final README: quick start, configuration, CLI, API/UI, tests, promptfoo one-command eval, example conversations, assumptions, limitations, architecture overview.
-- Put actual baseline/final metrics and commands in `docs/EVAL_RESULTS.md`, with reproducible artifact links, no claims about original historical model.
+- Put reviewer-facing baseline/final metrics and commands in `README.md`; keep detailed local notes in ignored `docs/EVAL_RESULTS.md`, with no claims about an original historical model.
 - Include actual working demo scenes S01, S03, S02; capture real screenshots if useful; confirm the live tool trace matches SQLite state.
 - Produce 5–15 minute Loom storyboard using `docs/05_playground_and_demo.md` with real screen capture; don't pretend a video exists if it hasn't been recorded.
 - Ensure Git repository includes source code, original assets, prompt, nine tools/mappings, eval config, tests, `.env.example`, no secrets/PII/local state.

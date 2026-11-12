@@ -19,3 +19,7 @@ frontend/dist/
 *.sqlite
 *.sqlite3
 evals/artifacts/
+CODEX_FIRST_PROMPT.md
+README_START_HERE.md
+docs/EVAL_RESULTS.md
+docs/IMPLEMENTATION_STATUS.md

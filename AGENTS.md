@@ -34,7 +34,7 @@ Build a grounded, multi-turn, text-in/text-out AI voice-sales agent for fictiona
 3. Implement the **smallest working vertical slice** for that milestone; do not rush into the next milestone.
 4. Add deterministic tests for behavior (positive, negative, and retry/race where relevant).
 5. Run exact commands; report pass/fail and notable output. If credentials unavailable, run offline checks and state what remains unverified.
-6. Update `README.md` and `docs/IMPLEMENTATION_STATUS.md` with commands, changed files, open issues, and next milestone. Keep any original source modifications out of `inherited/`.
+6. Update the tracked `README.md` with reviewer-facing commands and evidence, and the ignored local `docs/IMPLEMENTATION_STATUS.md` with working notes and the next milestone. Keep any original source modifications out of `inherited/`.
 7. Stop after milestone acceptance and request owner review **only if there is a genuinely material unresolved product choice**. Otherwise report outcome and await the next task.
 
 ## Source-of-truth policy
@@ -51,6 +51,6 @@ Examples: entrance fee `$3,500` not broken seed `$2,500`; original dog weight li
 - Record actual baseline/final results; no invented percentages, cost, latency or historical reports.
 - Provide short, practical milestone notes instead of multi-page speculative progress messages.
 
-## First task
+## Repository history
 
-Follow `CODEX_FIRST_PROMPT.md` then `tasks/M0_repository_and_assets.md`. **Do not** implement the LLM or frontend during M0.
+Keep `CODEX_FIRST_PROMPT.md`, `docs/EVAL_RESULTS.md`, and `docs/IMPLEMENTATION_STATUS.md` out of Git history. Ask the owner before committing, rewriting commits, or pushing.

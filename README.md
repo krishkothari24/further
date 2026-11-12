@@ -1,18 +1,26 @@
 # Sophie repository
 
-This repository contains Sophie, a text-in/text-out AI voice-sales agent for fictional ACME Senior Living. CLI, HTTP, playground, and Promptfoo use the same `SophieRuntime` and verified SQLite-backed tools. The separate reconstructed baseline intentionally uses the inherited prompt and mock. The local demo and offline evaluation work without an API key. Live OpenAI behavior and a Loom recording have not yet been verified or produced. Start with [the five-minute guide](README_START_HERE.md) or the commands below.
+This repository contains Sophie, a text-in/text-out AI voice-sales agent for fictional ACME Senior Living. CLI, HTTP, playground, and Promptfoo use the same `SophieRuntime` and verified SQLite-backed tools. The separate reconstructed baseline intentionally uses the inherited prompt and mock. The local demo and offline evaluation work without an API key. Live OpenAI behavior and a Loom recording have not yet been verified or produced.
 
 ## Quick start
 
-From the repository root:
+From the repository root, install Python dependencies and start the offline API:
 
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[dev]'
-.venv/bin/python -m sophie.cli --db .local-sophie.db --sandbox new --conversation new --clock 2026-11-11T10:00:00-05:00 --offline
+.venv/bin/python -m sophie.api --db .local-sophie.db --offline
 ```
 
-Type a caller turn, such as `What is the entrance fee?`, then `/quit`. To use the browser, run the [local API](#m4-local-http-api) and [playground](#m5-local-playground) in separate terminals. To check three real stateful scenes without a browser, run `PYTHONPATH=backend:. .venv/bin/python scripts/demo_scenes.py`. For Promptfoo, install root dependencies with `npm ci`, then use the [one-command offline evaluation](#m6-evaluations). The [demo guide](docs/M8_DEMO_AND_SUBMISSION.md) covers S01, S03, S02, and the Loom storyboard.
+In a second terminal, start the playground:
+
+```sh
+cd frontend
+npm ci
+npm run dev
+```
+
+Open `http://127.0.0.1:5173/`. Select S01, S03, or S02 and use **Debug view** to compare Sophie's replies, tool events, and persisted business state. Suggestions fill the caller input but do not send automatically. For a terminal conversation, use the [CLI command](#m3-conversation-and-cli). To check the three demo scenes without a browser, run `PYTHONPATH=backend:. .venv/bin/python scripts/demo_scenes.py`. For Promptfoo, install root dependencies with `npm ci`, then use the [offline evaluation command](#m6-evaluations). The [demo guide](docs/M8_DEMO_AND_SUBMISSION.md) includes a Loom storyboard.
 
 ## Requirements
 
@@ -122,9 +130,22 @@ mkdir -p evals/artifacts
 env -u OPENAI_API_KEY PYTHONPATH=backend:. SOPHIE_EVAL_MODE=offline PROMPTFOO_PYTHON=.venv/bin/python PROMPTFOO_DISABLE_TELEMETRY=1 npx promptfoo eval --no-cache --no-write --no-table --no-progress-bar -o evals/artifacts/final-offline.json
 ```
 
-The root `provider.py` creates a fresh sandbox for each case, calls `SophieRuntime`, and returns its transcript, redacted persisted snapshot, and structured events. `evals/assertions.py` checks all 24 single-turn cases and 18 stateful scenarios, including verified writes, races, retries, and forbidden claims. Every failed assertion is critical. An actual offline Promptfoo run passed **42/42** cases with no model tokens; see [evaluation results](docs/EVAL_RESULTS.md) and [inherited seed mapping](docs/SEED_CASE_MAPPING.md). Raw results are ignored under `evals/artifacts/` because they can contain caller text.
+The root `provider.py` creates a fresh sandbox for each case, calls `SophieRuntime`, and returns its transcript, redacted persisted snapshot, and structured events. `evals/assertions.py` checks all 24 single-turn cases and 18 stateful scenarios, including verified writes, races, retries, and forbidden claims. Every failed assertion is critical. The latest offline Promptfoo run passed **42/42** cases with no model calls; see [evaluation evidence](#evaluation-evidence) and the [inherited seed mapping](docs/SEED_CASE_MAPPING.md). Raw results are ignored under `evals/artifacts/` because they can contain caller text.
 
-The reconstructed baseline lives in `evals/baseline_reconstructed/`. Its copied seed config retains all 15 original cases and invalid expectations; its provider uses the original prompt, tool definitions, and in-memory mock with only minimal schema glue. It has **not** been run against OpenAI, and no baseline/final model comparison is claimed. When the key is added, run the documented live commands in [evaluation results](docs/EVAL_RESULTS.md) and inspect critical failures before calling M6 fully accepted.
+The reconstructed baseline lives in `evals/baseline_reconstructed/`. Its copied seed config retains all 15 original cases and invalid expectations; its provider uses the original prompt, tool definitions, and in-memory mock with only minimal schema glue. It has **not** been run against OpenAI, and no baseline/final model comparison is claimed. When a key is configured, run the [live commands below](#evaluation-evidence) and inspect critical failures before calling the evaluation complete.
+
+### Evaluation evidence
+
+On November 12, 2026, Promptfoo 0.125.1 ran the offline final suite with **42 passed, 0 failed, 0 errors**. It covered 24 single-turn cases and 18 isolated stateful scenarios. The artifact reported 72 runtime turns and 72 tool-result events. Its case latency was p50 38 ms, p95 72 ms, maximum 124 ms. These are local offline measurements; there were no model calls or model token reports. The inherited 15-case baseline and the final suite have **not** been run live, so live quality, cost, latency, and a before/after score remain unverified. The inherited seed also contains contradictory expectations; the [mapping](docs/SEED_CASE_MAPPING.md) explains why the final suite does not optimize for them.
+
+With `OPENAI_API_KEY` set locally, use the same `OPENAI_MODEL` for both runs:
+
+```sh
+PROMPTFOO_PYTHON=.venv/bin/python OPENAI_MODEL=gpt-6.1-sol npx promptfoo eval -c evals/baseline_reconstructed/promptfooconfig.yaml --no-cache --no-table -o evals/artifacts/baseline-live.json
+PYTHONPATH=backend:. SOPHIE_EVAL_MODE=live PROMPTFOO_PYTHON=.venv/bin/python OPENAI_MODEL=gpt-6.1-sol npx promptfoo eval --no-cache --no-table -o evals/artifacts/final-live.json
+```
+
+The original seed has three model-graded assertions, so the live baseline may incur grader cost. Report actual pass/fail/errors and measured tokens, latency, and cost from the saved artifacts; any failed critical state assertion blocks acceptance regardless of the aggregate score.
 
 ## M7 offline regression and metrics
 
@@ -140,7 +161,7 @@ env -u OPENAI_API_KEY PYTHONPATH=backend:. SOPHIE_EVAL_MODE=offline PROMPTFOO_PY
 .venv/bin/python scripts/report_eval_metrics.py evals/artifacts/final-offline.json
 ```
 
-The metrics command reports failure categories, case latency percentiles, reported model tokens/cost, and observed tool results per turn without printing transcripts. It can write a shareable summary with `--output path.json`. Offline token counts are zero because no model is called. The live baseline/final commands and key prerequisites remain in [evaluation results](docs/EVAL_RESULTS.md); run the full critical gates again after any prompt, policy, or service change.
+The metrics command reports failure categories, case latency percentiles, reported model tokens/cost, and observed tool results per turn without printing transcripts. It can write a shareable summary with `--output path.json`. Offline token counts are zero because no model is called. Run the full critical gates again after any prompt, policy, or service change.
 
 A repeated `client_turn_id` with identical caller text returns the saved result. Reusing the ID with different text returns an error and leaves state unchanged. Local SQLite files retain caller transcript/contact until the operator deletes the files; use synthetic data for demos and remove local DB and raw evaluation artifacts when no longer needed. The loopback API is not suitable for public deployment without authentication and a retention policy.
 
@@ -159,9 +180,8 @@ The local API is loopback-only and unauthenticated. It stores caller transcript/
 - `evals/`: Promptfoo final suite, scenario driver, critical assertions, and reconstructed baseline
 - `tests/`: offline asset, runtime, API, and evaluation tests
 - `inherited/`: immutable original assignment artifacts
-- `docs/IMPLEMENTATION_STATUS.md`: current evidence, open issues, next milestone
 - `docs/DECISION_LOG.md`: M0 choices and rationale
 
 For future API access, copy [`.env.example`](.env.example) to `.env` and fill placeholders only when a milestone needs them. Never commit `.env`, local databases, or caller data.
 
-**Submission status:** M8's offline package, three browser scenes, and local source commit are ready. A Loom recording and live M6/M7 results still require the owner's recording and API key. The repository has no defined M9 task. On this Mac, full root `npm ci` failed from low disk space; the fresh-clone offline evaluation passed with the lockfile-verified native binding workaround recorded in the [M8 guide](docs/M8_DEMO_AND_SUBMISSION.md#fresh-clone-installation-check).
+**Submission status:** The offline package and three browser scenes are ready. A 5–15 minute Loom recording and live baseline/final results remain open. On this Mac, full root `npm ci` failed from low disk space; the fresh-clone offline evaluation passed with the lockfile-verified native binding workaround recorded in the [M8 guide](docs/M8_DEMO_AND_SUBMISSION.md#fresh-clone-installation-check).

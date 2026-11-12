@@ -18,7 +18,7 @@ The script creates a fresh SQLite sandbox for each scene, sends real caller turn
 | S03 | 4 caller turns; `book_tour` returned `slot_taken`; zero persisted tours | No booking confirmation or phantom tour |
 | S02 | 4 caller turns; `reschedule_tour` then `cancel_tour`; one final canceled row | Both events reference the same seeded tour ID |
 
-The exact generated IDs change each run. The latest offline Promptfoo run passed 42/42 critical cases; its measured details and the still-unrun live commands are in [EVAL_RESULTS.md](EVAL_RESULTS.md). Raw artifacts are ignored under `evals/artifacts/` because they contain caller text.
+The exact generated IDs change each run. The latest offline Promptfoo run passed 42/42 critical cases; its measured details and the still-unrun live commands are in the [README evaluation section](../README.md#evaluation-evidence). Raw artifacts are ignored under `evals/artifacts/` because they contain caller text.
 
 ## Browser walkthrough
 
@@ -52,7 +52,7 @@ Before submission, record and link the Loom URL here. The user must review the r
 - Source: `backend/sophie/`, `frontend/`, `evals/`, root `provider.py` and `promptfooconfig.yaml`, `tests/`, `scripts/`, and this README chain. Three browser screenshots are under `docs/assets/`.
 - Inherited originals: `inherited/` hashes match `inherited/SHA256.md`; never edit them to improve scores.
 - Credentials: `.env.example` contains placeholders; `.env`, local SQLite, raw evaluation artifacts, caches, and build output are ignored.
-- Open: live API smoke, reconstructed baseline and final live Promptfoo results on the same model, their actual token/cost/latency report, a real Loom recording, and publishing the reviewed repository. The default model is GPT-6.1 Sol, but an account key is needed to verify access and quality.
+- Open: live API smoke, reconstructed baseline and final live Promptfoo results on the same model, their actual token/cost/latency report, a real Loom recording, and publishing the reviewed repository. The default model is GPT-6.1 Sol, but an account key is needed to verify access and quality. Keep the reviewer-facing evidence in the README; local working notes are excluded from Git.
 
 ## Fresh-clone installation check
 

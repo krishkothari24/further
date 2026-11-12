@@ -51,7 +51,7 @@ If using `uv`, npm scripts, or separate directories, provide a one-command docum
 
 ## Reports/evidence
 
-Store a short tracked `docs/EVAL_RESULTS.md` summarizing exactly which commands ran, when, model/config version, counts, categories and failures; link to versioned raw outputs under `evals/artifacts/` (do not commit PII). If not run, say `NOT RUN`. Add CI that runs offline suites without model key and conditionally runs live smoke only if properly configured.
+Keep a short tracked evaluation summary in `README.md` with the commands run, model/config version, counts, categories, and failures. Keep detailed working notes in the ignored local `docs/EVAL_RESULTS.md`; raw outputs under `evals/artifacts/` are also ignored because they may contain caller text. If a run has not happened, say `NOT RUN`. Add CI that runs offline suites without a model key and conditionally runs live smoke only if properly configured.
 
 ## Official docs (for Codex to check implementation details against current versions)
 
