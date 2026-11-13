@@ -48,7 +48,7 @@ async function send(text, number) {
   await waitFor(`document.querySelectorAll('.message.sophie').length === ${number} && !document.querySelector('.primary-button').textContent.includes('Sending')`, `turn ${number}`);
 }
 async function tab(label) {
-  await evaluate(`Array.from(document.querySelectorAll('[role="tab"]')).find(node => node.textContent.includes(${JSON.stringify(label)})).click()`);
+  await evaluate(`(() => { if (!document.querySelector('[role="tab"]')) document.querySelector('.details-toggle').click(); Array.from(document.querySelectorAll('[role="tab"]')).find(node => node.textContent.includes(${JSON.stringify(label)})).click(); return true; })()`);
 }
 async function screenshot(name) {
   const directory = resolve('docs/assets');

@@ -22,7 +22,7 @@ The exact generated IDs change each run. The latest offline Promptfoo run passed
 
 ## Browser walkthrough
 
-Start `.venv/bin/python -m sophie.api --db .local-sophie.db --offline` and, in another terminal, `cd frontend && npm ci && npm run dev`. Open `http://127.0.0.1:5173/`, select **Debug view**, and use the scenario selector. The suggestions fill the composer; click **Send turn** for each caller message. The API, CLI, UI, and Promptfoo provider all call the same runtime.
+Start `.venv/bin/python -m sophie.api --db .local-sophie.db` with a configured API key and, in another terminal, `cd frontend && npm ci && npm run dev`. Open `http://127.0.0.1:5173/`, use the scenario selector, then choose **Show details** to inspect events and state. Open **Suggested turns** if needed; a suggestion only fills the composer. Click **Send** for each caller message. The API, CLI, UI, and Promptfoo provider all call the same runtime.
 
 1. **S01:** Ask about cost, Medicaid, Sunday at 3 p.m., Tuesday at 2 p.m., then Tuesday at 3 p.m. Provide the synthetic name/contact requested and confirm both readbacks. Show **Events** and **Business state** side by side with Sophie's booking text. Point to the matching confirmation ID, local date/time, and `booked` status.
 2. **S03:** Ask for next Wednesday at 10 a.m., provide synthetic contact, and confirm. Show the `slot_taken` event, Sophie's refusal to claim a booking, and **No records** under tours. This is the failure recovery moment.

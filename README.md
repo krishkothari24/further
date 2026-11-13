@@ -34,7 +34,7 @@ OPENAI_API_KEY=... .venv/bin/python -m sophie.api --db .local-sophie.db
 cd frontend && npm ci && npm run dev
 ```
 
-Open `http://127.0.0.1:5173/`. Choose a scenario or a freeform session, enter caller text, and compare Sophie's response, tool events, and persisted state in **Debug view**. Scenario suggestions fill the composer but do not send automatically. The API is loopback-only and has no production authentication.
+Open `http://127.0.0.1:5173/`. The playground opens on a focused conversation. Choose a scenario or an open conversation, then enter caller text. **Show details** opens events, persisted state, and canonical facts; **Session options** contains new-conversation and reset actions. Scenario suggestions are collapsed until opened and fill the composer without sending. The API is loopback-only and has no production authentication.
 
 For a terminal conversation:
 
