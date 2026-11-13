@@ -15,7 +15,7 @@ Keep this record in sync as Codex learns from tests. Owner decisions are final u
 | A-05 | Keep inherited files immutable | Fair baseline | Chosen |
 | A-06 | Request-only transfer/callback/brochure | Truthful sandbox semantics | Chosen |
 | A-07 | Reschedule/cancel by confirmed ID in demo | No arbitrary mutation | Assumption; needs auth in production |
-| A-08 | Migration of old prompt's simple amenities/diet/couples into canonical catalog has explicit provenance | Broad factual support | Optional after explicit curation |
+| A-08 | Gym, elevators, and low-sodium option migrated from old prompt with `legacy-prompt` provenance; couples policy remains unknown | Broad factual support | Implemented assumption; owner review welcome |
 | A-09 | No automatic room-specific quotes, Medicaid eligibility or dementia suitability | Avoid invented consequential policies | Chosen |
 | A-10 | Clear no-answer + handoff when a fact is absent | Safe fallback | Chosen |
 

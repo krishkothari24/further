@@ -45,8 +45,8 @@ def test_evaluation_endpoint_reads_only_actual_named_artifacts(tmp_path):
         "items": [
             {
                 "file": "final-offline.json",
-                "suite": "Final agent",
-                "mode": "offline",
+                "suite": "Historical regex agent",
+                "mode": "offline-historical",
                 "eval_id": "eval-real",
                 "timestamp": "2026-11-12T01:00:00Z",
                 "model_id": None,

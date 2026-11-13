@@ -36,25 +36,14 @@ jobs:
       - run: npm test
       - run: npm run build
 
-  promptfoo-offline:
+  promptfoo-config:
     runs-on: ubuntu-latest
-    env:
-      SOPHIE_EVAL_MODE: offline
-      PROMPTFOO_DISABLE_TELEMETRY: '1'
-      PYTHONPATH: backend:.
-      PROMPTFOO_PYTHON: .venv/bin/python
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
-      - run: python -m venv .venv
-      - run: .venv/bin/python -m pip install -e '.[dev]'
       - run: npm ci
-      - run: mkdir -p evals/artifacts
-      - run: npx promptfoo eval --no-cache --no-write --no-table --no-progress-bar -o evals/artifacts/final-offline.json
-      - run: .venv/bin/python scripts/report_eval_metrics.py evals/artifacts/final-offline.json
+      - run: npx promptfoo validate config -c promptfooconfig.yaml
+      - run: npx promptfoo validate config -c evals/noisy_promptfooconfig.yaml

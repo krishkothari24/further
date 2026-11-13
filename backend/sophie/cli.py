@@ -19,16 +19,15 @@ def main(argv: list[str] | None = None) -> int:
         "--conversation", required=True, help="Existing conversation ID or 'new'"
     )
     parser.add_argument(
-        "--clock", help="ISO timestamp with UTC offset, required for a new sandbox"
+        "--clock",
+        help="Optional fixed ISO clock for a reproducible scenario; omit for live time",
     )
     parser.add_argument(
         "--offline",
         action="store_true",
-        help="Use deterministic policy without a model",
+        help="Diagnostic only: no language interpretation or business action without a model",
     )
     args = parser.parse_args(argv)
-    if args.sandbox == "new" and not args.clock:
-        parser.error("--clock is required with --sandbox new")
     if args.sandbox != "new" and args.clock:
         parser.error("--clock only applies to --sandbox new")
     simulated_now = None

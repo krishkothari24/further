@@ -1,5 +1,7 @@
 # M2 policy and state contract
 
+**Historical milestone contract:** This records the earlier M2 parser and proposal design. The current runtime removes transcript regex interpretation and direct cancellation; see the [current LLM contract](M3_LLM_CONTRACT.md) and latest [decision log](DECISION_LOG.md).
+
 `PolicyRuntime.handle_turn(sandbox_id, conversation_id, client_turn_id, caller_text)` is the persistent deterministic core for later model integration. It stores caller/Sophie messages, pending task and stage, selected checked slot, tentative and confirmed contact fields, lead ID, and verified same-session tour references. The SQLite `turns` uniqueness key is `(sandbox_id, conversation_id, client_turn_id)`. A completed duplicate returns the exact saved result, even if its caller text differs. A turn found in `processing` is reported as still processing; it is never blindly rerun.
 
 ## Authority boundary

@@ -1,6 +1,6 @@
 # M8 demo and submission guide
 
-**Evidence status (2026-11-12):** The offline S01, S03, and S02 scenes below ran through the shared `SophieRuntime` and passed state/trace checks. No live OpenAI run or Loom recording exists yet. The baseline remains reconstructed from inherited assets; no historical baseline score is claimed.
+**Historical scenes only:** The offline S01, S03, and S02 scenes below ran through the earlier regex-based runtime. The current model-led runtime no longer uses that offline parser, so these screenshots and the old offline 42/42 score do not validate current conversation quality. A local live OpenAI run is reported in the [README](../README.md); no Loom recording exists yet.
 
 ## Reproduce the three scenes
 
@@ -52,7 +52,7 @@ Before submission, record and link the Loom URL here. The user must review the r
 - Source: `backend/sophie/`, `frontend/`, `evals/`, root `provider.py` and `promptfooconfig.yaml`, `tests/`, `scripts/`, and this README chain. Three browser screenshots are under `docs/assets/`.
 - Inherited originals: `inherited/` hashes match `inherited/SHA256.md`; never edit them to improve scores.
 - Credentials: `.env.example` contains placeholders; `.env`, local SQLite, raw evaluation artifacts, caches, and build output are ignored.
-- Open: live API smoke, reconstructed baseline and final live Promptfoo results on the same model, their actual token/cost/latency report, a real Loom recording, and publishing the reviewed repository. The default model is GPT-6.1 Sol, but an account key is needed to verify access and quality. Keep the reviewer-facing evidence in the README; local working notes are excluded from Git.
+- Open: a real Loom recording and publishing the reviewed repository. The local live API smoke and reconstructed baseline/final Promptfoo runs used GPT-6.1 Sol; results and measured token/latency are in the README. Actual monetary cost remains unavailable from the saved artifact. Keep the reviewer-facing evidence in the README; local working notes are excluded from Git.
 
 ## Fresh-clone installation check
 

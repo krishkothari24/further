@@ -1,5 +1,11 @@
 # Evaluation and evidence implementation instructions
 
+**Current evidence boundary:** The earlier model-free 42/42 Promptfoo run measured the removed regex interpreter. A local live `gpt-6.1-sol` run on November 13, 2026 passed 42/42 current cases with zero critical state failures; see the [README](../README.md#tests-and-evaluation). The reconstructed inherited baseline passed 3/15 on different, weaker seed assertions.
+
+The manually triggered [live evaluation workflow](../.github/workflows/live-evals.yml) runs the final and noisy Promptfoo suites only when the repository has an `OPENAI_API_KEY` secret. Its [result gate](../scripts/check_eval_gate.py) fails on a missing, duplicate, failed, or stale case, including an absent critical state score. The normal push/PR workflow stays key-free and runs policy tests plus Promptfoo configuration validation. No live workflow run has been observed yet.
+
+The local [usage ledger](../backend/sophie/usage.py) records each model request without transcript/contact data. The [eval reporter](../scripts/report_eval_metrics.py) prints runtime cost estimates and, with an explicit grader-model assumption, grader estimates from saved token counts. Promptfoo's zero cost field is not treated as a bill. The workflow prints these reports even when a saved evaluation fails; no remote workflow run has been observed.
+
 Use `docs/reference/07_evaluation_strategy.md` and `docs/reference/08_test_catalog.md` for the detailed test IDs. This file is the short, actionable handoff.
 
 ## Required suites

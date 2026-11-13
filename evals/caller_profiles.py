@@ -115,8 +115,15 @@ def run_scenario(
                 break
             if last.status != "clarification_required":
                 break
-            spoken = last.spoken_text.lower()
-            if "full name" in spoken or "phone number or email" in spoken:
+            state = runtime.get_state(sandbox_id, conversation_id)
+            pending = state.pending_task
+            if pending is None:
+                break
+            if pending.stage == "contact_readback":
+                last = send("Yes, those details are right.")
+            elif pending.stage == "action_readback":
+                last = send("Yes, please go ahead with that request.")
+            elif pending.kind in {"book", "callback", "brochure"} and not state.lead_id:
                 name = profile.get("name", "Jamie Demo")
                 email = profile.get("email", "jamie.demo@example.test")
                 phone = profile.get("phone")
@@ -124,15 +131,7 @@ def run_scenario(
                 if phone:
                     contact = f"My name is {name}, email {email}, phone {phone}."
                 last = send(contact)
-            elif (
-                "is that right?" in spoken
-                or "may i book" in spoken
-                or "may i move" in spoken
-                or "should i cancel" in spoken
-                or "may i queue" in spoken
-            ):
-                last = send("Yes.")
-            elif "full mailing address" in spoken:
+            elif pending.kind == "brochure" and not pending.address:
                 address = profile.get(
                     "mailing_address", "145 Fake Street, Charlotte, NC 28203"
                 )

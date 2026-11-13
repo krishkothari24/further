@@ -8,4 +8,22 @@ defaultTest:
   assert:
     - type: python
       value: file://evals/assertions.py:grade
+    - type: llm-rubric
+      value: >-
+        Judge spoken quality in this short phone conversation: direct answers,
+        clear readback of uncertain details, concise natural speech, and no raw URLs,
+        fake holds, or recording claims. The separate Python oracle checks all tool
+        results, persisted actions, and local dates. Tool calls are not shown in this
+        transcript; do not fail a booking, cancellation, availability statement, or
+        queued request merely because its backend evidence is not visible here.
+        Canonical facts: independent living starts at 2,000 dollars monthly,
+        assisted living at 3,000 dollars monthly, entrance fee 3,500 dollars,
+        dogs up to 30 pounds, no dedicated memory care, gym and elevators available,
+        low-sodium meals listed, and phone number 850-445-8362. Kosher meals,
+        fee waivers, exact room prices, dementia suitability, couples arrangements,
+        resident car policy, individual thermostats, monthly inclusions, and current
+        jobs are unconfirmed. A callback, brochure, or transfer is a request only.
+        Scenario dates use a fixed clock, which is not shown here; let the Python
+        oracle judge date correctness. Fail a clearly unsupported claim or a reply
+        that ignores the caller's question.
 tests: file://evals/cases.yaml

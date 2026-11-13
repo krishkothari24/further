@@ -5,7 +5,7 @@ The FastAPI app is a loopback-only sandbox wrapper around `SophieRuntime`. It li
 | Route | Behavior |
 |---|---|
 | `POST /api/sandboxes` | Create an empty sandbox or one allowlisted S01–S18 preset via `scenario_id` |
-| `POST /api/sandboxes/{id}/reset` | Create a fresh sandbox with the same preset and clock; retire the old ID from API/runtime access |
+| `POST /api/sandboxes/{id}/reset` | Create a fresh sandbox with the same preset and clock mode; retire the old ID from API/runtime access |
 | `POST /api/conversations` | Create a conversation owned by one active sandbox |
 | `POST /api/conversations/{id}/turns` | Run `SophieRuntime.handle_turn`; `client_turn_id` controls replay |
 | `GET /api/conversations/{id}` | Local-only transcript and conversation stage, scoped by `sandbox_id` |
@@ -19,6 +19,6 @@ All request bodies use strict Pydantic models; unknown fields return HTTP 422. U
 
 `fixtures/scenarios.json` is the declarative S01–S18 registry from the reference catalog. It pins the base clock to November 11, 2026 at 10:00 a.m. New York time and marks caller profiles as synthetic. S02 seeds one synthetic lead and a future tour through the verified service layer; S13, S14, and S18 seed synthetic leads. S03 injects a lost slot only in its sandbox; S17 injects the inherited contradictory booking response only in its sandbox. The API accepts only a scenario ID, never arbitrary fault flags or a caller-text control. A seeded tour is copied into the initial conversation's verified same-session reference list and marked `seeded` in the state response.
 
-Reset preserves the preset and fixed clock while allocating new IDs. Historical rows remain in SQLite for audit, but a retired sandbox is inaccessible to the API and runtime. The app does not create actual callbacks, transfers, or mailings. M5 will add a UI; M6 will load real evaluation artifacts. No live OpenAI request was made in M4.
+Reset preserves a scenario's fixed clock; a freeform sandbox resumes with an advancing clock. Historical rows remain in SQLite for audit, but a retired sandbox is inaccessible to the API and runtime. The app does not create actual callbacks, transfers, or mailings. No live OpenAI request was made in M4.
 
 M5 follow-up: `GET /api/evaluations` now reads fixed, named local Promptfoo JSON artifacts and returns redacted summary counts. The default directory is `evals/artifacts/` beside the database's parent directory; `--evaluation-dir` overrides it. See [M5 playground contract](M5_PLAYGROUND.md).

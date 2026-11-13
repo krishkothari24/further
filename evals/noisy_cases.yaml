@@ -1,0 +1,18 @@
+- description: N01 paraphrased visit and spelled email
+  vars: {case_id: N01, noisy_plan_id: N01, user_input: "Run N01"}
+- description: N02 mixed yes/no before contact and booking
+  vars: {case_id: N02, noisy_plan_id: N02, user_input: "Run N02"}
+- description: N03 changed tour slot during confirmation
+  vars: {case_id: N03, noisy_plan_id: N03, user_input: "Run N03"}
+- description: N04 negated booking approval
+  vars: {case_id: N04, noisy_plan_id: N04, user_input: "Run N04"}
+- description: N05 noisy phone and correction during readback
+  vars: {case_id: N05, noisy_plan_id: N05, user_input: "Run N05"}
+- description: N06 misheard weekday and time clarified
+  vars: {case_id: N06, noisy_plan_id: N06, user_input: "Run N06"}
+- description: N07 negated human request then explicit request
+  vars: {case_id: N07, noisy_plan_id: N07, user_input: "Run N07"}
+- description: N08 self-corrected cancellation
+  vars: {case_id: N08, noisy_plan_id: N08, user_input: "Run N08"}
+- description: N09 run-on compound factual question
+  vars: {case_id: N09, noisy_plan_id: N09, user_input: "Run N09"}

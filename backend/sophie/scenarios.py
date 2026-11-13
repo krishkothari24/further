@@ -144,7 +144,11 @@ class ScenarioCatalog:
 
     def reset_sandbox(self, backend: CanonicalBackend, sandbox_id: str) -> str:
         fixture = backend.fixture_info(sandbox_id)
-        original_clock = backend.sandbox_now(sandbox_id)
+        original_clock = (
+            backend.sandbox_now(sandbox_id)
+            if backend.sandbox_clock_is_fixed(sandbox_id)
+            else None
+        )
         new_id = self.create_sandbox(
             backend, fixture["scenario_id"], clock_override=original_clock
         )

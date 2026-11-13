@@ -1,4 +1,4 @@
-"""M2 deterministic policy runtime; model proposals never authorize writes."""
+"""Persisted policy runtime; typed model interpretation never authorizes writes."""
 
 import re
 import uuid
@@ -6,8 +6,8 @@ from datetime import datetime, timezone
 from typing import Protocol
 
 from .backend import CanonicalBackend
-from .contracts import TOOL_INPUTS, ToolResult
-from .grounding import fact_requests, speak_fact
+from .contracts import ToolResult
+from .grounding import speak_fact
 from .state import (
     ActionOutcome,
     Contact,
@@ -17,38 +17,13 @@ from .state import (
     PendingTask,
     ProposedTurn,
     SelectedSlot,
+    TurnUnderstanding,
     TurnResult,
     ValidatedToolRequest,
 )
-from .time_utils import normalize_datetime, spoken_slot
+from .time_utils import TimeResolution, spoken_slot
 
 
-AFFIRMATIVE = {
-    "yes",
-    "yes please",
-    "yes that's right",
-    "yes that is right",
-    "correct",
-    "that's right",
-    "please do",
-}
-NEGATIVE = {"no", "no thanks", "that's wrong", "that is wrong"}
-EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
-PHONE_RE = re.compile(r"(?<!\d)(?:\+1[-. ]?)?\(?\d{3}\)?[-. ]?\d{3}[-. ]?\d{4}(?!\d)")
-TOUR_ID_RE = re.compile(r"\bT-[A-Z0-9]+\b", re.IGNORECASE)
-TOPIC_HINTS = {
-    "pricing": ("price", "cost", "fee"),
-    "pets": ("pet", "dog", "cat"),
-    "memory_care": ("memory", "dementia"),
-    "care_types": ("care", "living"),
-    "room_types": ("room", "bedroom"),
-    "phone": ("phone", "number"),
-    "address": ("address", "located"),
-    "amenities": ("amenity", "gym", "elevator"),
-    "dietary": ("meal", "diet", "sodium", "kosher"),
-    "funding": ("medicaid", "funding"),
-    "careers": ("job", "hiring", "career"),
-}
 SAFE_RESULT_CODES = {
     "booked",
     "rescheduled",
@@ -76,6 +51,24 @@ SAFE_RESULT_CODES = {
     "idempotency_conflict",
 }
 
+# A selected fact may need context to answer the caller's actual question safely.
+# These are registry relationships, independent of caller wording or eval cases.
+FACT_CONTEXT: dict[tuple[str, str], tuple[tuple[str, str], ...]] = {
+    ("pets", "dogs"): (("pets", "dog_weight_limit_lbs"),),
+    ("pricing", "two_bedroom_assisted_living"): (
+        ("pricing", "assisted_living_from"),
+        ("pricing", "two_bedroom_assisted_living"),
+    ),
+    ("memory_care", "dementia_suitability"): (
+        ("memory_care", "offered"),
+        ("memory_care", "dementia_suitability"),
+    ),
+    ("pricing", "entrance_fee_waiver"): (
+        ("pricing", "entrance_fee"),
+        ("pricing", "entrance_fee_waiver"),
+    ),
+}
+
 
 class ProposalSource(Protocol):
     def propose(self, caller_text: str, state: ConversationState) -> ProposedTurn: ...
@@ -84,43 +77,6 @@ class ProposalSource(Protocol):
 class EmptyProposalSource:
     def propose(self, caller_text: str, state: ConversationState) -> ProposedTurn:
         return ProposedTurn()
-
-
-def _affirmed(text: str) -> bool:
-    return text.strip().lower().rstrip(".!?") in AFFIRMATIVE
-
-
-def _denied(text: str) -> bool:
-    return text.strip().lower().rstrip(".!?") in NEGATIVE
-
-
-def _contact_from_text(text: str) -> Contact:
-    name = re.search(
-        r"\bmy name is\s+([A-Za-z'-]+)\s+([A-Za-z'-]+)\b", text, re.IGNORECASE
-    )
-    email = EMAIL_RE.search(text)
-    spoken_email = None
-    if email is None:
-        spelled = re.search(
-            r"\bemail (?:is|:)?\s+([a-z](?:[ -]+[a-z]){2,})\s+at\s+([a-z0-9]+)\s+dot\s+([a-z]{2,})\b",
-            text,
-            re.IGNORECASE,
-        )
-        if spelled:
-            spoken_email = (
-                re.sub(r"[ -]", "", spelled.group(1))
-                + "@"
-                + spelled.group(2)
-                + "."
-                + spelled.group(3)
-            ).lower()
-    phone = PHONE_RE.search(text)
-    return Contact(
-        first_name=name.group(1).title() if name else None,
-        last_name=name.group(2).title() if name else None,
-        phone=phone.group(0) if phone else None,
-        email=email.group(0).lower() if email else spoken_email,
-    )
 
 
 def _has_contact(contact: Contact, *, full_name: bool) -> bool:
@@ -151,14 +107,10 @@ class PolicyRuntime:
         backend: CanonicalBackend,
         proposals: ProposalSource | None = None,
         *,
-        max_tool_rounds: int = 4,
         identity_intro: bool = False,
     ):
-        if max_tool_rounds < 1:
-            raise ValueError("max_tool_rounds must be positive")
         self.backend = backend
         self.proposals = proposals or EmptyProposalSource()
-        self.max_tool_rounds = max_tool_rounds
         self.identity_intro = identity_intro
 
     def create_conversation(self, sandbox_id: str) -> str:
@@ -324,41 +276,31 @@ class PolicyRuntime:
             proposed = self.proposals.propose(caller_text, state.model_copy(deep=True))
             if not isinstance(proposed, ProposedTurn):
                 proposed = ProposedTurn.model_validate(proposed)
-            requested_facts = fact_requests(caller_text)
-            model_facts: list[tuple[str, str]] = []
-            for index, proposal in enumerate(proposed.proposals):
-                if index >= self.max_tool_rounds:
-                    emit("tool_round_limit", outcome="ignored")
-                    break
-                safe = self._safe_proposal_params(proposal.arguments)
-                safe_name = (
-                    proposal.name if proposal.name in TOOL_INPUTS else "unknown_tool"
-                )
-                emit("proposal_received", tool_name=safe_name, safe_params=safe)
-                if proposal.name == "get_community_info":
-                    topic, field = (
-                        proposal.arguments.get("topic"),
-                        proposal.arguments.get("field"),
-                    )
+            if proposed.understanding is not None:
+                emit("interpretation_received", outcome="validated")
+            requested_facts: list[tuple[str, str]] = []
+            if proposed.understanding is not None:
+                for fact in proposed.understanding.facts:
                     if (
-                        isinstance(topic, str)
-                        and isinstance(field, str)
-                        and (topic, field) in requested_facts
+                        fact.topic in self.backend.facts
+                        and fact.field in self.backend.facts[fact.topic]
                     ):
-                        model_facts.append((topic, field))
-                        continue
-                # The deterministic policy below constructs requests from caller-confirmed state.
-                # Even a syntactically valid model write is not itself authority to mutate.
-                emit(
-                    "policy_rejected",
-                    tool_name=safe_name,
-                    outcome="proposal_not_authority",
-                )
+                        requested_facts.append((fact.topic, fact.field))
             spoken, status = self._process(
-                state, caller_text, client_turn_id, outcomes, emit
+                state,
+                caller_text,
+                client_turn_id,
+                outcomes,
+                emit,
+                proposed.understanding,
             )
             fact_parts: list[str] = []
-            for topic, field in dict.fromkeys(requested_facts + model_facts):
+            grounded_facts = dict.fromkeys(
+                related
+                for requested in requested_facts
+                for related in FACT_CONTEXT.get(requested, (requested,))
+            )
+            for topic, field in grounded_facts:
                 request = ValidatedToolRequest(
                     name="get_community_info",
                     parameters={"topic": topic, "field": field},
@@ -454,12 +396,57 @@ class PolicyRuntime:
         turn_id: str,
         outcomes: list[ActionOutcome],
         emit,
+        understanding: TurnUnderstanding | None = None,
     ) -> tuple[str, str]:
         pending = state.pending_task
+        if understanding is None:
+            return (
+                "I didn't catch that clearly. Could you say it another way?",
+                "clarification_required",
+            )
+        affirmation = understanding.confirmation == "affirm"
+        denial = understanding.confirmation == "deny"
+        if pending and understanding and pending.stage == "contact_readback":
+            corrections = {
+                key: value
+                for key in ("first_name", "last_name", "phone", "email")
+                if (value := getattr(understanding, key)) is not None
+                and value != getattr(state.tentative_contact, key)
+            }
+            if corrections:
+                for key, value in corrections.items():
+                    setattr(state.tentative_contact, key, value)
+                    state.contact_confirmation[key] = "tentative"
+                return _contact_readback(
+                    state.tentative_contact
+                ), "clarification_required"
+        if pending and understanding and pending.stage == "action_readback":
+            changed_action = understanding.intent not in {"none", pending.kind}
+            changed_slot = bool(
+                pending.slot
+                and (
+                    understanding.date
+                    and understanding.date != pending.slot.date
+                    or understanding.time
+                    and understanding.time != pending.slot.time
+                )
+            )
+            if changed_action:
+                state.pending_task = None
+                state.stage = "collecting"
+                return (
+                    "Okay, I haven't made that change. Please say what you want me to do.",
+                    "clarification_required",
+                )
+            if changed_slot:
+                pending.slot = None
+                pending.stage = "collecting"
+                state.selected_time = None
+                state.stage = "collecting"
         if pending and pending.stage == "contact_readback":
-            if _affirmed(text):
+            if affirmation:
                 return self._confirm_contact(state, turn_id, outcomes, emit)
-            if _denied(text):
+            if denial:
                 for field, value in state.tentative_contact.model_dump().items():
                     if (
                         value is not None
@@ -474,32 +461,37 @@ class PolicyRuntime:
                     "clarification_required",
                 )
         if pending and pending.stage == "action_readback":
-            if _affirmed(text):
+            if affirmation:
                 return self._execute_pending(state, turn_id, outcomes, emit)
-            if _denied(text):
+            if denial:
                 state.pending_task = None
                 state.stage = "collecting"
                 return "Okay, I haven't made that change.", "completed"
 
-        lowered = text.lower()
-        if pending and re.search(
-            r"\b(?:do not|don't|not|never)\s+(?:book|cancel|move|reschedule|send|call)\b",
-            lowered,
+        if (
+            pending
+            and understanding
+            and pending.stage in {"contact_readback", "action_readback"}
+            and understanding.confirmation == "unclear"
         ):
-            state.pending_task = None
-            state.stage = "collecting"
-            return "Okay, I haven't made that change.", "completed"
-        contact = _contact_from_text(text)
+            return (
+                "I didn't catch a clear yes or no. Should I proceed with what I just read back?",
+                "clarification_required",
+            )
+
+        contact = Contact(
+            first_name=understanding.first_name,
+            last_name=understanding.last_name,
+            phone=understanding.phone,
+            email=understanding.email,
+        )
         has_new_contact = any(
             value is not None for value in contact.model_dump().values()
         )
         if (
             has_new_contact
             and state.lead_id
-            and re.search(
-                r"\b(actually|correction|correct|change my|new phone|new email)\b",
-                lowered,
-            )
+            and understanding.intent == "contact_update"
         ):
             state.pending_task = PendingTask(
                 kind="contact_update", stage="contact_readback", intent_confirmed=True
@@ -510,42 +502,25 @@ class PolicyRuntime:
                     state.contact_confirmation[field] = "tentative"
             return _contact_readback(contact), "clarification_required"
 
+        intent = understanding.intent
+
         if (
-            re.search(r"\bcancel\b", lowered)
-            and "tour" in lowered
-            and not re.search(r"\b(?:do not|don't|not|never)\s+cancel\b", lowered)
+            intent == "cancel"
+            and pending
+            and pending.kind == "book"
+            and not state.verified_tour_ids
         ):
-            state.pending_task = PendingTask(kind="cancel", intent_confirmed=True)
-        elif re.search(r"\b(reschedule|move|change)\b", lowered) and "tour" in lowered:
-            state.pending_task = PendingTask(kind="reschedule", intent_confirmed=True)
-        elif (
-            re.search(r"\b(book|schedule)\b", lowered)
-            and (
-                "tour" in lowered
-                or normalize_datetime(
-                    text, self.backend.sandbox_now(state.sandbox_id)
-                ).date
+            state.pending_task = None
+            state.stage = "completed"
+            return (
+                "I haven't booked the tour we were discussing. If you mean an existing tour, please give me its confirmation number.",
+                "completed",
             )
-        ) or (
-            re.search(
-                r"\b(want|would like|can we|could we|can i|could i|i'd like)\b", lowered
-            )
-            and re.search(r"\b(tour|visit)\b", lowered)
-        ):
-            state.pending_task = PendingTask(kind="book", intent_confirmed=True)
-        elif "brochure" in lowered and re.search(r"\b(send|mail|brochure)\b", lowered):
-            state.pending_task = PendingTask(kind="brochure", intent_confirmed=True)
-        elif re.search(r"\b(call me|callback|call back)\b", lowered) and not re.search(
-            r"\b(?:do not|don't|not|never)\s+call\b", lowered
-        ):
-            state.pending_task = PendingTask(kind="callback", intent_confirmed=True)
-        elif re.search(
-            r"\b(transfer me|connect me|get me a human|get me a person|talk to a person|speak to a person|speak with a person|i want to speak to a person|real person please)\b",
-            lowered,
-        ) and not re.search(
-            r"\b(?:do not|don't|not|never)\s+(?:transfer|want|need|talk|speak)\b",
-            lowered,
-        ):
+
+        if intent in {"book", "reschedule", "cancel", "brochure", "callback"}:
+            if pending is None or pending.kind != intent:
+                state.pending_task = PendingTask(kind=intent, intent_confirmed=True)
+        elif intent == "transfer":
             request = ValidatedToolRequest(
                 name="transfer_to_human",
                 parameters={
@@ -562,15 +537,13 @@ class PolicyRuntime:
 
         pending = state.pending_task
         if pending is None:
-            if "purchasing" in lowered or "vendor" in lowered:
+            if intent == "vendor":
                 return (
                     "I don't have a confirmed purchasing contact. I can record a request to speak with a team member.",
                     "completed",
                 )
-            if "available" in lowered:
-                resolution = normalize_datetime(
-                    text, self.backend.sandbox_now(state.sandbox_id)
-                )
+            if intent == "availability":
+                resolution = self._resolve_time(state, text, understanding)
                 if resolution.ambiguous or not resolution.date or not resolution.time:
                     return "Which date and time did you mean?", "clarification_required"
                 availability = self.backend.call(
@@ -601,14 +574,14 @@ class PolicyRuntime:
                 "completed",
             )
 
-        tour_id = TOUR_ID_RE.search(text)
+        tour_id = understanding.confirmation_id
         if pending.kind in {"cancel", "reschedule"}:
             if tour_id:
                 pending.confirmation_id = next(
                     (
                         stored
                         for stored in state.verified_tour_ids
-                        if stored.lower() == tour_id.group(0).lower()
+                        if stored.lower() == tour_id.lower()
                     ),
                     None,
                 )
@@ -616,15 +589,19 @@ class PolicyRuntime:
                 pending.confirmation_id = state.verified_tour_ids[0]
             if pending.confirmation_id not in state.verified_tour_ids:
                 pending.confirmation_id = None
+                if tour_id and state.verified_tour_ids:
+                    reply = "That confirmation number doesn't match an active tour in this conversation, so I haven't changed it. Please check the number."
+                elif state.verified_tour_ids:
+                    reply = "Which tour do you mean? Please give me its confirmation number."
+                else:
+                    reply = "I can't find an active tour in this conversation, so I haven't changed it. Please check the confirmation number."
                 return (
-                    "Please give me the confirmation number for your tour.",
+                    reply,
                     "clarification_required",
                 )
 
         if pending.kind in {"book", "reschedule"}:
-            resolution = normalize_datetime(
-                text, self.backend.sandbox_now(state.sandbox_id)
-            )
+            resolution = self._resolve_time(state, text, understanding)
             if resolution.date:
                 pending.last_date = resolution.date
             if resolution.ambiguous:
@@ -661,17 +638,9 @@ class PolicyRuntime:
                 state.selected_time = pending.slot
 
         if pending.kind == "callback":
-            match = re.search(
-                r"\bbest time (?:is|would be)\s+(.+)", text, re.IGNORECASE
-            )
-            if match:
-                pending.best_time = match.group(1).strip().rstrip(".")
+            pending.best_time = understanding.best_time or pending.best_time
         if pending.kind == "brochure":
-            match = re.search(
-                r"\b(?:mail it to|send it to|address is)\s+(.+)", text, re.IGNORECASE
-            )
-            if match:
-                pending.address = match.group(1).strip().rstrip(".")
+            pending.address = understanding.address or pending.address
 
         if has_new_contact and pending.kind in {"book", "callback", "brochure"}:
             state.tentative_contact = contact
@@ -682,9 +651,25 @@ class PolicyRuntime:
                     state.contact_confirmation[field] = "tentative"
             return _contact_readback(contact), "clarification_required"
 
-        if pending.kind == "cancel" and tour_id and pending.confirmation_id:
-            return self._execute_pending(state, turn_id, outcomes, emit)
         return self._next_question(state)
+
+    def _resolve_time(
+        self,
+        state: ConversationState,
+        text: str,
+        understanding: TurnUnderstanding | None,
+    ) -> TimeResolution:
+        date, hour = understanding.date, understanding.time
+        if date is not None:
+            try:
+                datetime.strptime(date, "%Y-%m-%d")
+            except ValueError:
+                return TimeResolution(ambiguous=True, reason="invalid_date")
+        if hour is not None and not re.fullmatch(r"(?:0\d|1\d|2[0-3]):[0-5]\d", hour):
+            return TimeResolution(ambiguous=True, reason="invalid_time")
+        return TimeResolution(
+            date=date, time=hour, ambiguous=understanding.time_ambiguous
+        )
 
     def _confirm_contact(
         self,
@@ -764,7 +749,7 @@ class PolicyRuntime:
             pending.stage = "action_readback"
             state.stage = "action_readback"
             return (
-                f"May I move tour {pending.confirmation_id} to {spoken_slot(pending.slot.date, pending.slot.time)}?",
+                f"May I move your tour ending in {pending.confirmation_id[-6:]} to {spoken_slot(pending.slot.date, pending.slot.time)}?",
                 "clarification_required",
             )
         if pending.kind == "cancel":
@@ -776,7 +761,7 @@ class PolicyRuntime:
             pending.stage = "action_readback"
             state.stage = "action_readback"
             return (
-                f"Should I cancel tour {pending.confirmation_id}?",
+                f"Should I cancel your tour ending in {pending.confirmation_id[-6:]}?",
                 "clarification_required",
             )
         if pending.kind == "callback":
@@ -1062,20 +1047,6 @@ class PolicyRuntime:
             for row in snapshot[table]
         )
 
-    def _safe_proposal_params(self, arguments: dict) -> dict:
-        safe: dict = {}
-        topic = arguments.get("topic")
-        if isinstance(topic, str) and topic in TOPIC_HINTS:
-            safe["topic"] = topic
-            field = arguments.get("field")
-            if isinstance(field, str) and field in self.backend.facts[topic]:
-                safe["field"] = field
-        for key, pattern in (("date", r"\d{4}-\d{2}-\d{2}"), ("time", r"\d{2}:\d{2}")):
-            value = arguments.get(key)
-            if isinstance(value, str) and re.fullmatch(pattern, value):
-                safe[key] = value
-        return safe
-
     @staticmethod
     def _wording(outcome: ActionOutcome, pending: PendingTask | None) -> str:
         if not outcome.verified:
@@ -1085,50 +1056,20 @@ class PolicyRuntime:
                 return "I couldn't find that tour, so I haven't changed it. Please check the confirmation number."
             return "I couldn't confirm that request, so I won't say it was completed. A team member can help."
         if outcome.kind == "booked" and outcome.date and outcome.time:
-            return f"Your tour is booked for {spoken_slot(outcome.date, outcome.time)}. Your confirmation number is {outcome.entity_id}."
+            slot = spoken_slot(outcome.date, outcome.time).rstrip(".")
+            return f"Your tour is booked for {slot}. Your confirmation number is {outcome.entity_id}."
         if outcome.kind == "rescheduled" and outcome.date and outcome.time:
-            return f"Tour {outcome.entity_id} is now set for {spoken_slot(outcome.date, outcome.time)}."
+            slot = spoken_slot(outcome.date, outcome.time).rstrip(".")
+            return f"Your tour is now set for {slot}."
         if outcome.kind == "canceled":
-            return f"Tour {outcome.entity_id} is canceled."
+            return "Your tour is canceled."
         if outcome.kind == "callback_queued":
             return "I've queued your callback request for the team."
         if outcome.kind == "brochure_queued":
             return "I've queued your brochure request for the team."
         if outcome.kind == "transfer_requested":
-            return "I've recorded your request to speak with a team member."
+            return "I've saved a request for a team member in this preview. I can't connect you live here."
         return "I've saved the confirmed contact detail."
-
-    @staticmethod
-    def _fact_wording(topic: str, field: str, result: ToolResult) -> str:
-        fact = result.data["fields"][field]
-        if fact["status"] != "known":
-            return "I don't have confirmed information about that. I can request staff follow-up."
-        value = fact["value"]
-        if topic == "pricing" and field == "entrance_fee":
-            return f"The entrance fee is {value:,} dollars."
-        if topic == "pricing" and field in {
-            "independent_living_from",
-            "assisted_living_from",
-        }:
-            care = (
-                "independent living"
-                if field.startswith("independent")
-                else "assisted living"
-            )
-            return f"{care.capitalize()} starts at {value:,} dollars per month."
-        if topic == "pets" and field == "dog_weight_limit_lbs":
-            return f"The dog weight limit is {value} pounds."
-        if topic == "memory_care" and field == "offered":
-            return (
-                "The community does not offer dedicated memory care."
-                if value is False
-                else "The community offers memory care."
-            )
-        if isinstance(value, bool):
-            return f"The catalog says {'yes' if value else 'no'} for {field.replace('_', ' ')}."
-        if isinstance(value, list):
-            return f"The catalog lists {', '.join(value)}."
-        return f"The catalog lists {value} for {field.replace('_', ' ')}."
 
     @staticmethod
     def _now() -> str:

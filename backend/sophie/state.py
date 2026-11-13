@@ -69,16 +69,42 @@ class ConversationState(StrictModel):
     last_outcome: str | None = None
 
 
-class ToolProposal(StrictModel):
-    """Untrusted model output. No proposal carries business authority."""
+class FactRequest(StrictModel):
+    topic: str
+    field: str
 
-    name: str
-    arguments: dict[str, Any] = Field(default_factory=dict)
+
+class TurnUnderstanding(StrictModel):
+    """Model interpretation of caller words, never authorization on its own."""
+
+    intent: Literal[
+        "none",
+        "book",
+        "reschedule",
+        "cancel",
+        "callback",
+        "brochure",
+        "transfer",
+        "availability",
+        "contact_update",
+        "vendor",
+    ] = "none"
+    confirmation: Literal["affirm", "deny", "unclear", "none"] = "none"
+    date: str | None = None
+    time: str | None = None
+    time_ambiguous: bool = False
+    confirmation_id: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    best_time: str | None = None
+    address: str | None = None
+    facts: list[FactRequest] = Field(default_factory=list)
 
 
 class ProposedTurn(StrictModel):
-    proposals: list[ToolProposal] = Field(default_factory=list)
-    draft_text: str | None = None
+    understanding: TurnUnderstanding | None = None
 
 
 class ValidatedToolRequest(StrictModel):

@@ -1,0 +1,27 @@
+description: Sophie live noisy-transcript regression (shared runtime)
+prompts:
+  - '{{user_input}}'
+providers:
+  - id: file://provider.py
+    label: SophieRuntime-live-noisy
+defaultTest:
+  assert:
+    - type: python
+      value: file://noisy_assertions.py:grade
+    - type: llm-rubric
+      value: >-
+        Judge spoken quality in this short phone conversation. Sophie should clarify
+        uncertain names, contact, dates, and approvals, answer the caller directly,
+        and keep replies concise. The separate Python oracle checks persisted actions,
+        tool results, and local dates. Tool calls are not shown in this transcript;
+        do not fail a claimed booking, cancellation, availability, or queued request
+        merely because backend evidence is absent here. The scenario clock is fixed
+        but not shown here; let the Python oracle judge date correctness. Canonical
+        facts: entrance fee 3,500 dollars, independent living from 2,000 dollars
+        monthly, assisted living from 3,000 dollars monthly, dogs up to 30 pounds,
+        no dedicated memory care, gym and elevators available, low-sodium meals
+        listed. Individual thermostats and fee waivers are unconfirmed. A human
+        transfer is only a recorded request. Fail a clearly unsupported claim,
+        premature action before caller approval, or repeated failure to answer a
+        clear question.
+tests: file://noisy_cases.yaml

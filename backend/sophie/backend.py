@@ -111,7 +111,8 @@ class CanonicalBackend:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS sandboxes (
                     id TEXT PRIMARY KEY, fixture_revision TEXT NOT NULL,
-                    simulated_now_utc TEXT NOT NULL, created_at_utc TEXT NOT NULL
+                    simulated_now_utc TEXT NOT NULL, created_at_utc TEXT NOT NULL,
+                    clock_is_fixed INTEGER NOT NULL DEFAULT 1
                 );
                 CREATE TABLE IF NOT EXISTS sandbox_fixtures (
                     sandbox_id TEXT PRIMARY KEY REFERENCES sandboxes(id),
@@ -180,6 +181,13 @@ class CanonicalBackend:
                     FOREIGN KEY (sandbox_id, conversation_id) REFERENCES conversations(sandbox_id, id)
                 );
             """)
+            columns = {
+                row["name"] for row in conn.execute("PRAGMA table_info(sandboxes)")
+            }
+            if "clock_is_fixed" not in columns:
+                conn.execute(
+                    "ALTER TABLE sandboxes ADD COLUMN clock_is_fixed INTEGER NOT NULL DEFAULT 1"
+                )
 
     def create_sandbox(self, *, simulated_now: datetime | None = None) -> str:
         instant = simulated_now or self.clock.now_utc()
@@ -188,12 +196,15 @@ class CanonicalBackend:
         sandbox_id = "S-" + uuid.uuid4().hex
         with self._connection() as conn:
             conn.execute(
-                "INSERT INTO sandboxes VALUES (?, ?, ?, ?)",
+                "INSERT INTO sandboxes (id, fixture_revision, simulated_now_utc, created_at_utc, clock_is_fixed) VALUES (?, ?, ?, ?, ?)",
                 (
                     sandbox_id,
                     FACT_REVISION,
                     instant.astimezone(timezone.utc).isoformat(),
                     self._audit_now(),
+                    int(
+                        simulated_now is not None or isinstance(self.clock, FixedClock)
+                    ),
                 ),
             )
             conn.execute(
@@ -274,15 +285,28 @@ class CanonicalBackend:
         )
 
     def sandbox_now(self, sandbox_id: str) -> datetime:
-        """Read the sandbox's fixed instant in community-local time."""
+        """Read a scenario's fixed instant or the current community-local time."""
 
         with self._connection() as conn:
             sandbox = self._sandbox(conn, sandbox_id)
             if sandbox is None:
                 raise KeyError(sandbox_id)
-            return datetime.fromisoformat(sandbox["simulated_now_utc"]).astimezone(
-                COMMUNITY_TZ
-            )
+            return self._now_for_sandbox(sandbox)
+
+    def sandbox_clock_is_fixed(self, sandbox_id: str) -> bool:
+        with self._connection() as conn:
+            sandbox = self._sandbox(conn, sandbox_id)
+            if sandbox is None:
+                raise KeyError(sandbox_id)
+            return bool(sandbox["clock_is_fixed"])
+
+    def _now_for_sandbox(self, sandbox: sqlite3.Row) -> datetime:
+        instant = (
+            datetime.fromisoformat(sandbox["simulated_now_utc"])
+            if sandbox["clock_is_fixed"]
+            else self.clock.now_utc()
+        )
+        return instant.astimezone(COMMUNITY_TZ)
 
     def call(
         self,
@@ -467,9 +491,7 @@ class CanonicalBackend:
         local = datetime.combine(day, hour, tzinfo=COMMUNITY_TZ)
         if local.astimezone(timezone.utc).astimezone(COMMUNITY_TZ) != local:
             return None, "invalid_slot"
-        now = datetime.fromisoformat(sandbox["simulated_now_utc"]).astimezone(
-            COMMUNITY_TZ
-        )
+        now = self._now_for_sandbox(sandbox)
         if local <= now:
             return None, "past_slot"
         if day.weekday() >= 5:
@@ -488,9 +510,7 @@ class CanonicalBackend:
         day = self._parse_date(date_text)
         if day is None:
             return _result(False, "invalid_date")
-        now = datetime.fromisoformat(sandbox["simulated_now_utc"]).astimezone(
-            COMMUNITY_TZ
-        )
+        now = self._now_for_sandbox(sandbox)
         if day < now.date():
             return _result(False, "past_date")
         if day.weekday() >= 5:

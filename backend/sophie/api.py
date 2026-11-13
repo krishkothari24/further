@@ -124,8 +124,9 @@ class EvaluationsView(StrictModel):
 
 
 EVALUATION_FILES = (
-    ("final-offline.json", "Final agent", "offline"),
+    ("final-offline.json", "Historical regex agent", "offline-historical"),
     ("final-live.json", "Final agent", "live"),
+    ("noisy-live.json", "Noisy caller suite", "live"),
     ("baseline-live.json", "Reconstructed baseline", "live"),
 )
 

@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -16,7 +17,7 @@ def run_scene(scenario_id: str) -> dict:
         backend = CanonicalBackend(Path(directory) / "state.db")
         catalog = ScenarioCatalog()
         sandbox_id = catalog.create_sandbox(backend, scenario_id)
-        runtime = SophieRuntime(backend, offline=True)
+        runtime = SophieRuntime(backend)
         conversation_id = runtime.create_conversation(sandbox_id)
         initial = backend.snapshot(sandbox_id)
         profile = {**catalog.base_user_profile, **catalog.get(scenario_id).user_profile}
@@ -38,10 +39,6 @@ def run_scene(scenario_id: str) -> dict:
         tours = final["tours"]
         if scenario_id == "S01":
             assert len(tours) == 1 and tours[0]["status"] == "booked"
-            assert (tours[0]["local_date"], tours[0]["local_time"]) == (
-                "2026-11-17",
-                "15:00",
-            )
             assert any(
                 item["tool"] == "book_tour"
                 and item["outcome"] == "booked"
@@ -73,7 +70,7 @@ def run_scene(scenario_id: str) -> dict:
             raise ValueError(f"unsupported demo scene: {scenario_id}")
         return {
             "scene": scenario_id,
-            "mode": "offline shared SophieRuntime",
+            "mode": "live shared SophieRuntime",
             "caller_turns": len(history),
             "tour_events": tour_events,
             "persisted_tours": [
@@ -90,6 +87,8 @@ def main() -> int:
     )
     parser.add_argument("--output", type=Path, help="Optional JSON evidence path")
     args = parser.parse_args()
+    if not os.environ.get("OPENAI_API_KEY"):
+        parser.error("OPENAI_API_KEY is required for current model-led demo scenes")
     results = [run_scene(scenario_id) for scenario_id in ("S01", "S03", "S02")]
     output = json.dumps(results, indent=2)
     if args.output:

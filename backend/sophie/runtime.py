@@ -12,7 +12,6 @@ class SophieRuntime(PolicyRuntime):
         *,
         model_client: ModelClient | None = None,
         offline: bool = False,
-        max_tool_rounds: int = 4,
     ):
         if offline and model_client is not None:
             raise ValueError("offline and model_client cannot both be set")
@@ -22,12 +21,9 @@ class SophieRuntime(PolicyRuntime):
             else ResponsesProposalSource(
                 backend,
                 model_client or OpenAIResponsesClient(),
-                max_rounds=max_tool_rounds,
             )
         )
-        super().__init__(
-            backend, source, max_tool_rounds=max_tool_rounds, identity_intro=True
-        )
+        super().__init__(backend, source, identity_intro=True)
 
     def create_conversation(self, sandbox_id: str) -> str:
         fixture = self.backend.fixture_info(sandbox_id)
