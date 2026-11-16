@@ -8,9 +8,6 @@ The assignment calls for accurate community answers, multi-turn tour changes, no
 
 The application now uses a **model-led interpretation** of each caller turn. It does not use regex or keyword lists to decide intent, affirmation, dates, contact, or fact topics. The policy validates the typed interpretation, checks availability, reads back consequential details, writes transactionally, and checks persisted state before announcing a completed action. If model interpretation is missing or invalid, Sophie asks for clarification and performs no write. Syntax checks for structured IDs and 24-hour times remain.
 
-A normal freeform sandbox uses an advancing community-local clock. Named scenario fixtures and an explicitly supplied clock remain fixed for reproducible demonstrations. The inherited tour schedule is retained: weekdays, hourly 9 a.m. through 6 p.m. starts, with Tuesday at 2 p.m. unavailable.
-
-**Live evaluation ran locally on November 13, 2026 with `gpt-6.1-sol`.** The reconstructed inherited baseline passed **3/15** seed cases; the current Sophie suite passed **42/42** cases with **zero critical state failures**; the separate noisy-caller suite passed **9/9**. The baseline and final suites differ in coverage and assertions, so these scores are not a paired improvement percentage. The previous **42/42 offline Promptfoo result** belongs to the older regex-based runtime and is historical evidence only. The old screenshots and demo scene report in [M8 notes](docs/M8_DEMO_AND_SUBMISSION.md) do not show current live behavior. No Loom recording exists yet.
 
 ## Set up and run a conversation
 
